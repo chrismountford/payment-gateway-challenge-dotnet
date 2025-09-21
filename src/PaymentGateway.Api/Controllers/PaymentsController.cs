@@ -33,15 +33,18 @@ public class PaymentsController : Controller
     [HttpPost("submit")]
     public async Task<ActionResult<PostPaymentResponse>> SubmitPaymentAsync([FromBody] SubmitPaymentRequest request)
     {
+        var cardNumberStr = request.CardNumber.ToString();
+        var lastFour = int.Parse(cardNumberStr[^4..]);
+        
         var payment = new PostPaymentResponse
         {
             Id = new Guid(),
             Status = Models.PaymentStatus.Authorized,
-            CardNumberLastFour = 3456,
-            ExpiryMonth = 2,
-            ExpiryYear = 2026,
-            Currency = "GBP",
-            Amount = 1000
+            CardNumberLastFour = lastFour,
+            ExpiryMonth = request.ExpiryMonth,
+            ExpiryYear = request.ExpiryYear,
+            Currency = request.Currency,
+            Amount = request.Amount
         };
 
         _paymentsRepository.Add(payment);

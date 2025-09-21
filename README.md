@@ -22,6 +22,7 @@ Feel free to change the structure of the solution, use a different test library 
 - Dependancies such as dotnet, aspnetcore-runtime, dotnet-core are already installed - this should be a step in the pipeline
 - Currencies of USD, EUR, GBP are acceptable, they are likely to be the most commonly used
 - It is ok to add some commonly used NuGet packages (e.g. FluentAssertions)
+- Validating amount is not specified, but a value less than 1 is invalid
 
 ## Functional Requirements
 - POST request to submit a payment
@@ -69,5 +70,5 @@ Feel free to change the structure of the solution, use a different test library 
 - Happy/unhappy path integration tests
     - Can I make a successful POST and then GET it?
     - Can I make an unsuccessful POST and then have it not exist in DB?
-- Load testing script
+- Integration test with bank simulator
 - List of proposed pipeline steps - as a script?
