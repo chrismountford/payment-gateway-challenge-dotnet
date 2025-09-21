@@ -13,7 +13,7 @@ public class SubmitPaymentRequest
     [ExpirationYear]
     public int ExpiryYear { get; set; }
 
-    [EnumDataType(typeof(Currency), ErrorMessage = "Invalid currency")]
+    [AllowedValues(["GBP", "EUR", "USD"], ErrorMessage = "Invalid currency")]
     public string Currency { get; set; }
 
     [Range(1, int.MaxValue, ErrorMessage = "Amount must be greater than 0")]

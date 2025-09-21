@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
+using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Models.Responses;
 using PaymentGateway.Api.Services;
@@ -35,11 +36,13 @@ public class PaymentsController : Controller
     {
         var cardNumberStr = request.CardNumber.ToString();
         var lastFour = int.Parse(cardNumberStr[^4..]);
+
+        // We need to send to the bank
         
         var payment = new PostPaymentResponse
         {
             Id = new Guid(),
-            Status = Models.PaymentStatus.Authorized,
+            Status = PaymentStatus.Authorized,
             CardNumberLastFour = lastFour,
             ExpiryMonth = request.ExpiryMonth,
             ExpiryYear = request.ExpiryYear,
