@@ -1,3 +1,7 @@
+using System.Text.Json;
+
+using Microsoft.Extensions.Hosting;
+
 using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Models.Responses;
@@ -18,30 +22,44 @@ public class BankGateway : IBankGateway
 
     public async Task<PostPaymentResponse> SubmitPaymentAsync(SubmitPaymentRequest request)
     {
+        var cardNumberStr = request.CardNumber.ToString();
+
         var body = new BankRequest
         {
-            card_number = request.CardNumber,
+            card_number = cardNumberStr,
             expiry_date = $"{request.ExpiryMonth}/{request.ExpiryYear}",
-            currency = request.Currency,
-            amount = request.Amount,
-            cvv = request.Cvv,
+            currency = request.Currency.ToString(),
+            amount = request.Amount.ToString(),
+            cvv = request.Cvv.ToString(),
         };
 
-        var bankResponse = await _httpClient.PostAsJsonAsync("http://localhost:8080/payments", body);
-
-        var bankResult = await bankResponse.Content.ReadFromJsonAsync<BankResponse>();
-
-        var cardNumberStr = request.CardNumber.ToString();
         var lastFour = int.Parse(cardNumberStr[^4..]);
-
-        return new PostPaymentResponse
+        var res = new PostPaymentResponse
         {
-            Status = bankResult.Authorized ? PaymentStatus.Authorized : PaymentStatus.Declined,
+            Id = Guid.NewGuid(),
+            Status = PaymentStatus.Declined,
             CardNumberLastFour = lastFour,
             ExpiryMonth = request.ExpiryMonth,
             ExpiryYear = request.ExpiryYear,
             Currency = request.Currency,
             Amount = request.Amount
         };
+        try
+        {
+            var bankResponse = await _httpClient.PostAsJsonAsync("http://localhost:8080/payments", body);
+
+            var bankResult = await bankResponse.Content.ReadFromJsonAsync<BankResponse>();
+
+            if (bankResult.Authorized)
+            {
+                res.Status = PaymentStatus.Authorized;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error
+        }
+
+        return res;
     }
 }

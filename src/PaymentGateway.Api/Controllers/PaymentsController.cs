@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Models.Responses;
 using PaymentGateway.Api.Services;
@@ -36,6 +35,14 @@ public class PaymentsController : Controller
     [HttpPost("submit")]
     public async Task<ActionResult<PostPaymentResponse>> SubmitPaymentAsync([FromBody] SubmitPaymentRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return new PostPaymentResponse
+            {
+                Status = Models.PaymentStatus.Rejected
+            };
+        }
+
         var payment = await _bankGateway.SubmitPaymentAsync(request);
 
         _paymentsRepository.Add(payment);

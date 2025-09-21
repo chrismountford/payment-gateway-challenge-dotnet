@@ -11,6 +11,7 @@ using Moq;
 
 using PaymentGateway.Api.Controllers;
 using PaymentGateway.Api.IntegrationTests.Fixtures;
+using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Models.Responses;
 using PaymentGateway.Api.Services;
@@ -156,6 +157,31 @@ public class PaymentsControllerTests
             Currency = "GBP",
             Amount = 1000
         }, options => options.Excluding(x => x.Id));
+    }
+
+    [Fact]
+    public async Task RequestValidationFailuresShouldReturnARejectedResponse()
+    {
+        // Arrange
+        var request = new SubmitPaymentRequest
+        {
+            CardNumber = 1,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = 1000,
+            Cvv = 666,
+        };
+
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
+        var client = webApplicationFactory.CreateClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync($"/api/Payments/submit", request);
+
+        // Assert
+        var result = await response.Content.ReadFromJsonAsync<PostPaymentResponse>();
+        Assert.Equal(PaymentStatus.Rejected, PaymentStatus.Rejected);
     }
 
     [Fact]

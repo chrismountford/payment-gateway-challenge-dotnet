@@ -57,7 +57,30 @@ public class BankGatewayTests
         Assert.Equal(PaymentStatus.Declined, response.Status);
     }
 
-    private IBankGateway GetGateway(bool authorized)
+    [Fact]
+    public async Task ShouldHandleAnUnavailableBankAndReturnDeclined()
+    {
+        // Arrange
+        var request = new SubmitPaymentRequest
+        {
+            CardNumber = 1234567890123456,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = 1000,
+            Cvv = 666,
+        };
+
+        var bankGateway = GetGateway(false, false);
+
+        // Act
+        var response = await bankGateway.SubmitPaymentAsync(request);
+
+        // Assert
+        Assert.Equal(PaymentStatus.Declined, response.Status);
+    }
+
+    private IBankGateway GetGateway(bool authorized, bool isServiceAvailable = true)
     {
         var content = new
         {
@@ -72,16 +95,29 @@ public class BankGatewayTests
         );
 
         var handlerMock = new Mock<HttpMessageHandler>();
-        handlerMock
-        .Protected()
-        .Setup<Task<HttpResponseMessage>>("SendAsync",
-            ItExpr.IsAny<HttpRequestMessage>(),
-            ItExpr.IsAny<CancellationToken>())
+
+        if (isServiceAvailable)
+        {
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = jsonContent
             });
+        }
+        else
+        {
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("ServiceUnavailable"));
+        }
 
         var httpClient = new HttpClient(handlerMock.Object)
         {

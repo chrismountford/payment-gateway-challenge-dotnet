@@ -25,7 +25,7 @@ public class GatewayTests : IClassFixture<CustomWebApplicationFactory>
     {
         var body = new SubmitPaymentRequest
         {
-            CardNumber = 1234567890123456,
+            CardNumber = 1234567890123451,
             ExpiryMonth = 2,
             ExpiryYear = 2026,
             Currency = "GBP",
@@ -46,7 +46,41 @@ public class GatewayTests : IClassFixture<CustomWebApplicationFactory>
         getResult.Should().BeEquivalentTo(new PostPaymentResponse
         {
             Status = Models.PaymentStatus.Authorized,
-            CardNumberLastFour = 3456,
+            CardNumberLastFour = 3451,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = 1000
+        }, options => options.Excluding(x => x.Id));
+    }
+
+    [Fact]
+    public async Task Should_ReturnId_When_SubmitIsSuccessful_And_GetReturnsSamePayment_EvenWhenBankRejects()
+    {
+        var body = new SubmitPaymentRequest
+        {
+            CardNumber = 1234567890123452,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = 1000,
+            Cvv = 666,
+        };
+
+        var submitResponse = await _client.PostAsJsonAsync("/api/Payments/submit", body);
+        submitResponse.EnsureSuccessStatusCode();
+
+        var result = await submitResponse.Content.ReadFromJsonAsync<GetPaymentResponse>();
+        Assert.NotNull(result);
+
+        var getResponse = await _client.GetAsync($"/api/Payments/{result.Id}");
+        getResponse.EnsureSuccessStatusCode();
+
+        var getResult = await getResponse.Content.ReadFromJsonAsync<PostPaymentResponse>();
+        getResult.Should().BeEquivalentTo(new PostPaymentResponse
+        {
+            Status = Models.PaymentStatus.Declined,
+            CardNumberLastFour = 3452,
             ExpiryMonth = 2,
             ExpiryYear = 2026,
             Currency = "GBP",
