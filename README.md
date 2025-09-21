@@ -23,6 +23,7 @@ Feel free to change the structure of the solution, use a different test library 
 - Currencies of USD, EUR, GBP are acceptable, they are likely to be the most commonly used
 - It is ok to add some commonly used NuGet packages (e.g. FluentAssertions)
 - Validating amount is not specified, but a value less than 1 is invalid
+- Declined payments are still persisted, rejected payments (due to a bad request) are not
 
 ## Functional Requirements
 - POST request to submit a payment

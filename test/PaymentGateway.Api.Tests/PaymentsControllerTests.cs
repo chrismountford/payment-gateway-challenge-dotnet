@@ -7,7 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
+using Moq;
+
 using PaymentGateway.Api.Controllers;
+using PaymentGateway.Api.IntegrationTests.Fixtures;
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Models.Responses;
 using PaymentGateway.Api.Services;
@@ -17,6 +20,7 @@ namespace PaymentGateway.Api.Tests;
 public class PaymentsControllerTests
 {
     private readonly Random _random = new();
+    private readonly Mock<IBankGateway> _mockBankGateway = new();
 
     [Fact]
     public async Task RetrievesAPaymentSuccessfully()
@@ -79,8 +83,18 @@ public class PaymentsControllerTests
             Amount = amount,
             Cvv = 666,
         };
-        var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
+
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
         var client = webApplicationFactory.CreateClient();
+        ConfigureBankGatewayResponse(new PostPaymentResponse
+        {
+            Status = Models.PaymentStatus.Authorized,
+            CardNumberLastFour = lastFour,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = amount
+        });
 
         // Act
         var response = await client.PostAsJsonAsync($"/api/Payments/submit", request);
@@ -101,7 +115,51 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task FailsToStoreAPaymentIfCardNumberIsInvalid()
+    public async Task ShouldReturnADeclineResponseWhenBankDeclines()
+    {
+        // Arrange
+        var request = new SubmitPaymentRequest
+        {
+            CardNumber = 1234567890123456,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = 1000,
+            Cvv = 666,
+        };
+
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
+        var client = webApplicationFactory.CreateClient();
+        ConfigureBankGatewayResponse(new PostPaymentResponse
+        {
+            Status = Models.PaymentStatus.Declined,
+            CardNumberLastFour = 3456,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = 1000
+        });
+
+        // Act
+        var response = await client.PostAsJsonAsync($"/api/Payments/submit", request);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<PostPaymentResponse>();
+        result.Should().BeEquivalentTo(new PostPaymentResponse
+        {
+            Status = Models.PaymentStatus.Declined,
+            CardNumberLastFour = 3456,
+            ExpiryMonth = 2,
+            ExpiryYear = 2026,
+            Currency = "GBP",
+            Amount = 1000
+        }, options => options.Excluding(x => x.Id));
+    }
+
+    [Fact]
+    public async Task FailsToProcessAPaymentIfCardNumberIsInvalid()
     {
         // Arrange
         var request = new SubmitPaymentRequest
@@ -114,7 +172,7 @@ public class PaymentsControllerTests
             Cvv = 666,
         };
 
-        var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
         var client = webApplicationFactory.CreateClient();
 
         // Act
@@ -130,7 +188,7 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task FailsToStoreAPaymentIfExpiryMonthIsInvalid()
+    public async Task FailsToProcessAPaymentIfExpiryMonthIsInvalid()
     {
         // Arrange
         var request = new SubmitPaymentRequest
@@ -143,7 +201,7 @@ public class PaymentsControllerTests
             Cvv = 666,
         };
 
-        var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
         var client = webApplicationFactory.CreateClient();
 
         // Act
@@ -159,7 +217,7 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task FailsToStoreAPaymentIfExpiryYearIsInvalid()
+    public async Task FailsToProcessAPaymentIfExpiryYearIsInvalid()
     {
         // Arrange
         var request = new SubmitPaymentRequest
@@ -172,7 +230,7 @@ public class PaymentsControllerTests
             Cvv = 666,
         };
 
-        var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
         var client = webApplicationFactory.CreateClient();
 
         // Act
@@ -188,7 +246,7 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task FailsToStoreAPaymentIfCurrencyIsInvalid()
+    public async Task FailsToProcessAPaymentIfCurrencyIsInvalid()
     {
         // Arrange
         var request = new SubmitPaymentRequest
@@ -201,7 +259,7 @@ public class PaymentsControllerTests
             Cvv = 666,
         };
 
-        var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
         var client = webApplicationFactory.CreateClient();
 
         // Act
@@ -217,7 +275,7 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task FailsToStoreAPaymentIfAmountIsLessThan1()
+    public async Task FailsToProcessAPaymentIfAmountIsLessThan1()
     {
         // Arrange
         var request = new SubmitPaymentRequest
@@ -230,7 +288,7 @@ public class PaymentsControllerTests
             Cvv = 666,
         };
 
-        var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
         var client = webApplicationFactory.CreateClient();
 
         // Act
@@ -246,7 +304,7 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task FailsToStoreAPaymentIfCvvIsInvalid()
+    public async Task FailsToProcessAPaymentIfCvvIsInvalid()
     {
         // Arrange
         var request = new SubmitPaymentRequest
@@ -259,7 +317,7 @@ public class PaymentsControllerTests
             Cvv = 99999,
         };
 
-        var webApplicationFactory = new WebApplicationFactory<PaymentsController>();
+        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
         var client = webApplicationFactory.CreateClient();
 
         // Act
@@ -273,4 +331,11 @@ public class PaymentsControllerTests
         var errors = problemDetails.Errors[nameof(SubmitPaymentRequest.Cvv)];
         Assert.Contains("Cvv must only be 3 or 4 characters", errors);
     }
+
+    public void ConfigureBankGatewayResponse(PostPaymentResponse response)
+        {
+            _mockBankGateway
+                .Setup(m => m.SubmitPaymentAsync(It.IsAny<SubmitPaymentRequest>()))
+                .ReturnsAsync(response);
+        }
 }

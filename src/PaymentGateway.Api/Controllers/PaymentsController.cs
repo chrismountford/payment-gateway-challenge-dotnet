@@ -12,10 +12,12 @@ namespace PaymentGateway.Api.Controllers;
 public class PaymentsController : Controller
 {
     private readonly PaymentsRepository _paymentsRepository;
+    private readonly IBankGateway _bankGateway;
 
-    public PaymentsController(PaymentsRepository paymentsRepository)
+    public PaymentsController(PaymentsRepository paymentsRepository, IBankGateway bankGateway)
     {
         _paymentsRepository = paymentsRepository;
+        _bankGateway = bankGateway;
     }
 
     [HttpGet("{id:guid}")]
@@ -34,21 +36,7 @@ public class PaymentsController : Controller
     [HttpPost("submit")]
     public async Task<ActionResult<PostPaymentResponse>> SubmitPaymentAsync([FromBody] SubmitPaymentRequest request)
     {
-        var cardNumberStr = request.CardNumber.ToString();
-        var lastFour = int.Parse(cardNumberStr[^4..]);
-
-        // We need to send to the bank
-        
-        var payment = new PostPaymentResponse
-        {
-            Id = new Guid(),
-            Status = PaymentStatus.Authorized,
-            CardNumberLastFour = lastFour,
-            ExpiryMonth = request.ExpiryMonth,
-            ExpiryYear = request.ExpiryYear,
-            Currency = request.Currency,
-            Amount = request.Amount
-        };
+        var payment = await _bankGateway.SubmitPaymentAsync(request);
 
         _paymentsRepository.Add(payment);
 

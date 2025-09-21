@@ -11,6 +11,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<PaymentsRepository>();
 
+builder.Services.AddHttpClient<IBankGateway, BankGateway>(client => client.BaseAddress = new Uri(builder.Configuration["BankUrl"]));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
