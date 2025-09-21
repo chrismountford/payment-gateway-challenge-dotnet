@@ -21,6 +21,7 @@ Feel free to change the structure of the solution, use a different test library 
 ## Assumptions
 - Dependancies such as dotnet, aspnetcore-runtime, dotnet-core are already installed - this should be a step in the pipeline
 - Currencies of USD, EUR, GBP are acceptable, they are likely to be the most commonly used
+- It is ok to add some commonly used NuGet packages (e.g. FluentAssertions)
 
 ## Functional Requirements
 - POST request to submit a payment
