@@ -72,3 +72,10 @@ Feel free to change the structure of the solution, use a different test library 
 - Happy/unhappy path integration tests
     - Can I make a successful POST and then GET it?
     - Can I make an unsuccessful POST and then have it not exist in DB?
+
+
+## Design Considerations
+- I have kept a separation of concerns where the controller is kept to only passing on a valid request to the bank gateway, and passing this to the repository layer.
+- I have handled validation using DataAnnotations on the SubmitPaymentRequest, this keeps all logic relating to validation as the responsibility of that model. The controller just needs to check for a valid result to determine the response.
+- I created a separate class to handle sending requests to the bank, I parse the response and use that to build an instance of the model that the controller can handle, and pass this back. There is the chance that the bank returns a 503, so I hanle this with a try, catch and ensure that the default return value is Declined. I would log the error in the catch so that this could be monitored.
+- I have kept the integration tests in a separate project, I would want to run these separately to the unit tests as they integrate with Mountebank, which can be slow, I want to focus on fast feedback while developing.
