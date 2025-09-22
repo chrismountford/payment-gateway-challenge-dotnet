@@ -72,7 +72,7 @@ public class PaymentsControllerTests
     [Theory]
     [InlineData(1234567890123456, 1000, 3456)]
     [InlineData(2323232323232323, 9999, 2323)]
-    public async Task StoresANewPaymentSuccessfully(long cardNumber, int amount, int lastFour)
+    public async Task StoresANewPaymentSuccessfully(ulong cardNumber, int amount, int lastFour)
     {
         // Arrange
         var request = new SubmitPaymentRequest
@@ -214,43 +214,15 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task FailsToProcessAPaymentIfExpiryMonthIsInvalid()
+    public async Task FailsToProcessAPaymentIfTheExpiryDateIsAMonthEarlierThisYear()
     {
         // Arrange
+        var lastMonth = DateTime.Today.AddMonths(-1);
         var request = new SubmitPaymentRequest
         {
             CardNumber = 1234567890123456,
-            ExpiryMonth = 55,
-            ExpiryYear = 2026,
-            Currency = "GBP",
-            Amount = 1000,
-            Cvv = 666,
-        };
-
-        var webApplicationFactory = new CustomWebApplicationFactory(_mockBankGateway);
-        var client = webApplicationFactory.CreateClient();
-
-        // Act
-        var response = await client.PostAsJsonAsync($"/api/Payments/submit", request);
-        var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotNull(problemDetails);
-
-        var errors = problemDetails.Errors[nameof(SubmitPaymentRequest.ExpiryMonth)];
-        Assert.Contains("Expiry month must be between 1 and 12", errors);
-    }
-
-    [Fact]
-    public async Task FailsToProcessAPaymentIfExpiryYearIsInvalid()
-    {
-        // Arrange
-        var request = new SubmitPaymentRequest
-        {
-            CardNumber = 1234567890123456,
-            ExpiryMonth = 2,
-            ExpiryYear = 1999,
+            ExpiryMonth = lastMonth.Month,
+            ExpiryYear = lastMonth.Year,
             Currency = "GBP",
             Amount = 1000,
             Cvv = 666,
@@ -268,7 +240,7 @@ public class PaymentsControllerTests
         Assert.NotNull(problemDetails);
 
         var errors = problemDetails.Errors[nameof(SubmitPaymentRequest.ExpiryYear)];
-        Assert.Contains("Expiration year must not be in the past", errors);
+        Assert.Contains("Expiry date must be in the future", errors);
     }
 
     [Fact]
